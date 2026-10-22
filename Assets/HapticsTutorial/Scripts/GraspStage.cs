@@ -1,0 +1,150 @@
+using System.Collections.Generic;
+using Oculus.Interaction;
+using Oculus.Interaction.HandGrab;
+using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
+
+namespace HapticsTutorial
+{
+    /// <summary>
+    /// Stage 1: pick up a grab interactable with a tracked (or simulated) hand and place it in the target zone.
+    /// </summary>
+    public class GraspStage : TutorialStage
+    {
+        [SerializeField] XRGrabInteractable grabInteractable;
+        [SerializeField] HandGrabInteractable metaGrab;
+        [SerializeField] TargetZone targetZone;
+        [SerializeField] float settleSeconds = 0.35f;
+
+        readonly List<IInteractableView> _metaViews = new List<IInteractableView>();
+        bool _wasGrabbed;
+        float _insideTimer;
+
+        public void Configure(XRGrabInteractable grab, TargetZone zone)
+        {
+            grabInteractable = grab;
+            targetZone = zone;
+        }
+
+        public override void BeginStage()
+        {
+            base.BeginStage();
+            _wasGrabbed = false;
+            _insideTimer = 0f;
+            ResolveMetaGrab();
+
+            var tracked = grabInteractable != null
+                ? grabInteractable.transform
+                : metaGrab != null ? metaGrab.transform.parent : null;
+            if (targetZone != null && tracked != null)
+                targetZone.SetTrackedObject(tracked);
+
+            if (grabInteractable != null && metaGrab == null)
+            {
+                grabInteractable.selectEntered.AddListener(OnSelectEntered);
+                grabInteractable.selectExited.AddListener(OnSelectExited);
+            }
+
+            var root = grabInteractable != null ? grabInteractable.gameObject : null;
+            if (root != null && metaGrab != null)
+            {
+                MetaGrabUtil.SetEnabled(root, true);
+                BindMetaViews(root);
+            }
+        }
+
+        public override void EndStage()
+        {
+            if (grabInteractable != null)
+            {
+                grabInteractable.selectEntered.RemoveListener(OnSelectEntered);
+                grabInteractable.selectExited.RemoveListener(OnSelectExited);
+                grabInteractable.enabled = false;
+            }
+
+            UnbindMetaViews();
+            base.EndStage();
+        }
+
+        void Update()
+        {
+            if (!IsActive || targetZone == null)
+                return;
+
+            var tracked = grabInteractable != null
+                ? grabInteractable.transform
+                : metaGrab != null ? metaGrab.transform.parent : null;
+            if (tracked == null)
+                return;
+
+            if (_wasGrabbed && targetZone.ContainsTrackedObject)
+            {
+                _insideTimer += Time.deltaTime;
+                if (_insideTimer >= settleSeconds)
+                    CompleteStage();
+            }
+            else
+            {
+                _insideTimer = 0f;
+            }
+        }
+
+        void OnSelectEntered(SelectEnterEventArgs args)
+        {
+            _wasGrabbed = true;
+            SessionLogger.Instance?.Log("grab", StageId, args.interactorObject?.transform.name);
+        }
+
+        void OnSelectExited(SelectExitEventArgs args)
+        {
+            if (targetZone == null || !targetZone.ContainsTrackedObject)
+                SessionLogger.Instance?.RecordDrop(StageId);
+        }
+
+        void ResolveMetaGrab()
+        {
+            if (metaGrab != null)
+                return;
+
+            var root = grabInteractable != null ? grabInteractable.gameObject : gameObject;
+            metaGrab = MetaGrabUtil.Find(root);
+        }
+
+        void BindMetaViews(GameObject root)
+        {
+            UnbindMetaViews();
+            foreach (var view in MetaGrabUtil.Views(root))
+            {
+                view.WhenSelectingInteractorViewAdded += OnMetaGrabbed;
+                view.WhenSelectingInteractorViewRemoved += OnMetaReleased;
+                _metaViews.Add(view);
+            }
+        }
+
+        void UnbindMetaViews()
+        {
+            foreach (var view in _metaViews)
+            {
+                if (view == null)
+                    continue;
+                view.WhenSelectingInteractorViewAdded -= OnMetaGrabbed;
+                view.WhenSelectingInteractorViewRemoved -= OnMetaReleased;
+            }
+
+            _metaViews.Clear();
+        }
+
+        void OnMetaGrabbed(IInteractorView view)
+        {
+            _wasGrabbed = true;
+            SessionLogger.Instance?.Log("grab", StageId, view?.Data?.ToString() ?? "hand");
+        }
+
+        void OnMetaReleased(IInteractorView view)
+        {
+            if (targetZone == null || !targetZone.ContainsTrackedObject)
+                SessionLogger.Instance?.RecordDrop(StageId);
+        }
+    }
+}
