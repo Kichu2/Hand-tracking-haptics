@@ -64,6 +64,7 @@ namespace HapticsTutorial.Editor
             TryFixProjectValidation();
             TrySwitchToAndroid();
             MetaHandGrabSetup.Apply();
+            MetaPassthroughCameraSetup.Apply();
             Debug.Log("[Haptics Tutorial] Meta Quest hand tracking guide applied: OpenXR, Camera Rig, Hand Tracking, Controllers and Hands, OpenXR/V2 skeleton.");
         }
 
@@ -141,6 +142,14 @@ namespace HapticsTutorial.Editor
             {
                 config.handTrackingSupport = OVRProjectConfig.HandTrackingSupport.ControllersAndHands;
                 config.handTrackingFrequency = OVRProjectConfig.HandTrackingFrequency.HIGH;
+                config.insightPassthroughSupport = OVRProjectConfig.FeatureSupport.Supported;
+                config.isPassthroughCameraAccessEnabled = true;
+                config.minHorizonOsSdkVersion = 74;
+                config.targetDeviceTypes.Remove(OVRProjectConfig.DeviceType.Quest);
+                config.targetDeviceTypes.Remove(OVRProjectConfig.DeviceType.Quest2);
+                config.targetDeviceTypes.Remove(OVRProjectConfig.DeviceType.QuestPro);
+                if (!config.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest3))
+                    config.targetDeviceTypes.Add(OVRProjectConfig.DeviceType.Quest3);
                 if (!config.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest3S))
                     config.targetDeviceTypes.Add(OVRProjectConfig.DeviceType.Quest3S);
                 OVRProjectConfig.CommitProjectConfig(config);

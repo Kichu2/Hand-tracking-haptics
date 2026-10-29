@@ -3,6 +3,8 @@
           xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="com.oculus.permission.HAND_TRACKING" />
     <uses-permission android:name="android.permission.HAND_TRACKING" />
+    <uses-permission android:name="horizonos.permission.HEADSET_CAMERA" />
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature
         android:name="oculus.software.handtracking"
         android:required="true" />

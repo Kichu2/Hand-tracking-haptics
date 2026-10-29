@@ -10,7 +10,7 @@ namespace HapticsTutorial
     /// <summary>
     /// Stage 2: register a virtual stand-in for a passive physical prop.
     /// Kim et al. 2023: the virtual mesh only needs to be roughly the same size/shape.
-    /// Hardcoded desk offset by default; dwell-touch (or grab-reposition) calibrates at runtime.
+    /// On Quest 3/3S the ghost follows ArUco-tracked cube pose; dwell or stable tracking confirms.
     /// </summary>
     public class PropRegistrationStage : TutorialStage
     {
@@ -21,6 +21,7 @@ namespace HapticsTutorial
         [SerializeField] float dwellSeconds = 1.25f;
         [SerializeField] Vector3 defaultLocalOffset = new Vector3(0.18f, 0.78f, 0.52f);
         [SerializeField] Renderer propRenderer;
+        [SerializeField] QuestCameraCubeLinker cameraLinker;
         [SerializeField] Color ghostColor = new Color(0.35f, 0.75f, 1f, 0.45f);
         [SerializeField] Color solidColor = new Color(0.2f, 0.55f, 0.85f, 1f);
 
@@ -39,13 +40,26 @@ namespace HapticsTutorial
             propRenderer = renderer;
         }
 
+        void Awake()
+        {
+            if (cameraLinker == null)
+                cameraLinker = FindFirstObjectByType<QuestCameraCubeLinker>();
+            if (cameraLinker == null)
+                cameraLinker = new GameObject("Quest Camera Cube Linker").AddComponent<QuestCameraCubeLinker>();
+        }
+
         public override void BeginStage()
         {
             base.BeginStage();
             _dwell = 0f;
             _registered = false;
 
-            if (virtualProp != null)
+            if (cameraLinker == null)
+                cameraLinker = FindFirstObjectByType<QuestCameraCubeLinker>();
+            cameraLinker?.SetVirtualProp(virtualProp);
+            cameraLinker?.SetFollowEnabled(true);
+
+            if (virtualProp != null && (cameraLinker == null || !cameraLinker.HasPoint))
                 virtualProp.position = defaultLocalOffset;
 
             ApplyColor(ghostColor);
@@ -73,6 +87,7 @@ namespace HapticsTutorial
             }
 
             UnbindMetaViews();
+            cameraLinker?.SetFollowEnabled(false);
             if (virtualProp != null)
                 MetaGrabUtil.SetEnabled(virtualProp.gameObject, false);
 
@@ -92,7 +107,8 @@ namespace HapticsTutorial
             if (!IsActive || _registered)
                 return;
 
-            if (IsHandOverProp())
+            var tracking = cameraLinker != null && cameraLinker.IsTracking;
+            if (IsHandOverProp() || tracking)
             {
                 _dwell += Time.deltaTime;
                 if (_dwell >= dwellSeconds)

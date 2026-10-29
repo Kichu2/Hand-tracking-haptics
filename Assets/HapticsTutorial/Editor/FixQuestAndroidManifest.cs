@@ -26,10 +26,11 @@ namespace HapticsTutorial.Editor
             nsmgr.AddNamespace("android", "http://schemas.android.com/apk/res/android");
             var androidNs = "http://schemas.android.com/apk/res/android";
 
-            var activities = doc.SelectNodes("//activity");
-            if (activities == null)
-                return;
+            EnsurePermission(doc, androidNs, "horizonos.permission.HEADSET_CAMERA");
+            EnsurePermission(doc, androidNs, "android.permission.CAMERA");
 
+            var activities = doc.SelectNodes("//activity");
+            if (activities != null)
             foreach (XmlElement activity in activities)
             {
                 var name = activity.GetAttribute("name", androidNs);
@@ -46,6 +47,23 @@ namespace HapticsTutorial.Editor
 
             doc.Save(manifestPath);
             Debug.Log($"[Haptics Tutorial] Patched Android manifest launch activity: {manifestPath}");
+        }
+
+        static void EnsurePermission(XmlDocument doc, string androidNs, string permission)
+        {
+            var nodes = doc.SelectNodes("/manifest/uses-permission");
+            if (nodes != null)
+            {
+                foreach (XmlElement node in nodes)
+                {
+                    if (node.GetAttribute("name", androidNs) == permission)
+                        return;
+                }
+            }
+
+            var element = doc.CreateElement("uses-permission");
+            element.SetAttribute("name", androidNs, permission);
+            doc.DocumentElement.InsertBefore(element, doc.DocumentElement.FirstChild);
         }
     }
 }

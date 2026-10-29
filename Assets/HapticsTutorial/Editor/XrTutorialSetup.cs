@@ -365,7 +365,7 @@ namespace HapticsTutorial.Editor
             propStage.ConfigureIdentity(
                 "prop_register",
                 "2. Align the physical prop",
-                "Place a ~12cm cube on the desk. Move the blue ghost onto it, then rest your hand on it until this prompt changes.");
+                "Stick ArUco 4x4 IDs 0-5 on the cube (one per face). Look at it; the blue ghost locks on. Rest your hand on it to confirm.");
             propStage.Configure(
                 prop.transform,
                 prop.GetComponent<XRGrabInteractable>(),

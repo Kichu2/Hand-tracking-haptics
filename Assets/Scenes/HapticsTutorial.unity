@@ -20195,14 +20195,14 @@ MonoBehaviour:
   virtualGreenScreenDepthTolerance: 0.2
   mrcActivationMode: 0
   launchSimultaneousHandsControllersOnStartup: 1
-  isInsightPassthroughEnabled: 0
+  isInsightPassthroughEnabled: 1
   shouldBoundaryVisibilityBeSuppressed: 0
   requestBodyTrackingPermissionOnStartup: 0
   requestFaceTrackingPermissionOnStartup: 0
   requestEyeTrackingPermissionOnStartup: 0
   requestScenePermissionOnStartup: 0
   requestRecordAudioPermissionOnStartup: 0
-  requestPassthroughCameraAccessPermissionOnStartup: 0
+  requestPassthroughCameraAccessPermissionOnStartup: 1
   _localDimming: 1
   _trackingOriginType: 1
   usePositionTracking: 1
@@ -21238,8 +21238,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HapticsTutorial.PropRegistrationStage
   stageId: prop_register
   title: 2. Align the physical prop
-  instruction: Place a ~12cm cube on the desk. Move the blue ghost onto it, then
-    rest your hand on it until this prompt changes.
+  instruction: Stick ArUco 4x4 IDs 0-5 on the cube (one per face). Look at it; the
+    blue ghost locks on. Rest your hand on it to confirm.
   virtualProp: {fileID: 1884632056}
   propGrab: {fileID: 1884632055}
   metaGrab: {fileID: 0}
