@@ -3,15 +3,16 @@ using UnityEngine;
 namespace HapticsTutorial
 {
     /// <summary>
-    /// OpenCV DICT_4X4_50 IDs 0–5 (first six of DICT_4X4_1000). Print these on the cube faces.
+    /// OpenCV DICT_4X4_50 IDs 0–11: 0–5 for the large haptic prop, 6–11 for the small grasp cube.
+    /// Any two of these (in any rotation) differ in at least 5 bits, so 1-bit correction is safe.
     /// </summary>
     public static class ArucoDict4x4
     {
-        public const int MarkerCount = 6;
+        public const int MarkerCount = 12;
         public const int Grid = 4;
-        public const int MaxHamming = 2;
+        public const int MaxHamming = 1;
 
-        // Rotation 0 only, row-major, 1 = black. Bytes from OpenCV DICT_4X4_1000.
+        // Rotation 0 only, row-major. Bytes from OpenCV DICT_4X4_1000, where a set bit is white.
         static readonly byte[,] Bytes =
         {
             { 181, 50 },
@@ -19,7 +20,13 @@ namespace HapticsTutorial
             { 51, 45 },
             { 153, 70 },
             { 84, 158 },
-            { 121, 205 }
+            { 121, 205 },
+            { 158, 46 },
+            { 196, 242 },
+            { 254, 218 },
+            { 207, 86 },
+            { 249, 145 },
+            { 17, 167 }
         };
 
         public static bool TryIdentify(int[,] bits, out int id, out int rotation)
@@ -47,12 +54,13 @@ namespace HapticsTutorial
             return best <= MaxHamming;
         }
 
+        /// <summary>1 = black module.</summary>
         public static int Bit(int id, int row, int col)
         {
             var index = row * Grid + col;
             var b = Bytes[id, index / 8];
             var bit = 7 - (index % 8);
-            return (b >> bit) & 1;
+            return 1 - ((b >> bit) & 1);
         }
 
         public static Texture2D MakeTexture(int id, int pixelsPerModule = 64)

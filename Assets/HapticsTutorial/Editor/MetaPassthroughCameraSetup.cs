@@ -66,7 +66,12 @@ namespace HapticsTutorial.Editor
             if (manager != null)
             {
                 manager.isInsightPassthroughEnabled = true;
-                manager.requestPassthroughCameraAccessPermissionOnStartup = true;
+                // Internal in the SDK, but serialized.
+                var managerSo = new SerializedObject(manager);
+                var requestCamera = managerSo.FindProperty("requestPassthroughCameraAccessPermissionOnStartup");
+                if (requestCamera != null)
+                    requestCamera.boolValue = true;
+                managerSo.ApplyModifiedPropertiesWithoutUndo();
                 EditorUtility.SetDirty(manager);
             }
 
@@ -87,7 +92,7 @@ namespace HapticsTutorial.Editor
             {
                 var so = new SerializedObject(stage);
                 so.FindProperty("instruction").stringValue =
-                    "Stick ArUco 4x4 IDs 0-5 on the cube (one per face). Look at it; the blue ghost locks on. Rest your hand on it to confirm.";
+                    "Stick the six printed markers on the cube, any face, any way up. Turn it slowly in view until the blue ghost matches it. Rest your hand on it to confirm.";
                 var linkerProp = so.FindProperty("cameraLinker");
                 if (linkerProp != null)
                     linkerProp.objectReferenceValue = linker;

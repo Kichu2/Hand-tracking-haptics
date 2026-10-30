@@ -18,8 +18,13 @@ namespace HapticsTutorial
         [SerializeField] float settleSeconds = 0.35f;
 
         readonly List<IInteractableView> _metaViews = new List<IInteractableView>();
+        const float PhysicalPickupDistance = 0.04f;
+
         bool _wasGrabbed;
         float _insideTimer;
+        QuestCameraCubeLinker _linker;
+        Vector3 _physicalStart;
+        bool _hasPhysicalStart;
 
         public void Configure(XRGrabInteractable grab, TargetZone zone)
         {
@@ -32,6 +37,7 @@ namespace HapticsTutorial
             base.BeginStage();
             _wasGrabbed = false;
             _insideTimer = 0f;
+            _hasPhysicalStart = false;
             ResolveMetaGrab();
 
             var tracked = grabInteractable != null
@@ -78,6 +84,8 @@ namespace HapticsTutorial
             if (tracked == null)
                 return;
 
+            DetectPhysicalPickup();
+
             if (_wasGrabbed && targetZone.ContainsTrackedObject)
             {
                 _insideTimer += Time.deltaTime;
@@ -88,6 +96,31 @@ namespace HapticsTutorial
             {
                 _insideTimer = 0f;
             }
+        }
+
+        // With a real marked cube driving the virtual one, the hand grabs the real cube, so no
+        // virtual grab event fires. Moving the real cube counts as picking it up instead.
+        void DetectPhysicalPickup()
+        {
+            if (_wasGrabbed)
+                return;
+            if (_linker == null)
+                _linker = FindFirstObjectByType<QuestCameraCubeLinker>();
+            if (_linker == null || !_linker.GraspCubeVisible)
+                return;
+
+            var position = _linker.GraspCubePose.position;
+            if (!_hasPhysicalStart)
+            {
+                _physicalStart = position;
+                _hasPhysicalStart = true;
+                return;
+            }
+
+            if (Vector3.Distance(position, _physicalStart) < PhysicalPickupDistance)
+                return;
+            _wasGrabbed = true;
+            SessionLogger.Instance?.Log("grab", StageId, "physical cube");
         }
 
         void OnSelectEntered(SelectEnterEventArgs args)
