@@ -13,6 +13,13 @@ namespace HapticsTutorial
             trackedObject = target;
         }
 
+        /// <summary>Moves the zone; containment is re-detected by the next trigger stay.</summary>
+        public void MoveTo(Vector3 position)
+        {
+            transform.position = position;
+            ContainsTrackedObject = false;
+        }
+
         void OnTriggerEnter(Collider other)
         {
             if (IsTracked(other))

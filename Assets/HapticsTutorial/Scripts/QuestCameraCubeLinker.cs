@@ -13,22 +13,26 @@ namespace HapticsTutorial
     /// <summary>
     /// Tracks real marked cubes on Quest 3 / 3S using Passthrough Camera Access (Horizon OS v74+)
     /// and moves their virtual twins to match:
-    /// markers 0–5 (7 cm) drive the Stage 2 haptic prop, markers 6–11 (4.2 cm, fits a Rubik's cube)
-    /// drive the Stage 1 grasp cube. The marker size comes from the id, so nothing needs setting.
-    /// Markers can go on any face, any way up: each cube's layout, centre and edge length are
-    /// learned while it is turned in view, then saved. Keeps the last pose when a cube leaves
+    /// markers 0–5 (4.8 cm) drive the blue haptic prop, markers 6–11 (4.2 cm, fits a Rubik's cube)
+    /// drive the orange grasp cube. The marker size comes from the id, so nothing needs setting.
+    /// Both cubes start from the layout of their printed nets (blue_cube_net_print.pdf,
+    /// rubiks_cube_net_print.pdf), so they track from the first marker seen; markers stuck on
+    /// some other way are relearned while in view. Keeps the last pose when a cube leaves
     /// the view. Camera frames are headset-only; Play Mode uses a look-ray fallback for the prop.
     /// </summary>
     public class QuestCameraCubeLinker : MonoBehaviour
     {
-        /// <summary>Black square size of markers 0–5 (docs/markers/cube_markers_print.pdf at 100%).</summary>
-        public const float MarkerSize = 0.07f;
+        /// <summary>Black square size of markers 0–5 (blue_cube_net_print.pdf or cube_markers_print.pdf at 100%).</summary>
+        public const float MarkerSize = 0.048f;
 
         /// <summary>Black square size of markers 6–11 (docs/markers/small_cube_markers_print.pdf at 100%).</summary>
         public const float SmallMarkerSize = 0.042f;
 
         /// <summary>Edge of the cube the Rubik's cube net (page 1 of rubiks_cube_net_print.pdf) is folded onto.</summary>
         public const float GraspCubeEdge = 0.060f;
+
+        /// <summary>Edge of the blue cube built from blue_cube_net_print.pdf.</summary>
+        public const float PropCubeEdge = 0.065f;
 
         // Smaller markers give unreliable single-marker poses, so they don't teach the layout.
         const float MinLearnArea = 1200f;
@@ -78,8 +82,8 @@ namespace HapticsTutorial
             public bool IsVisible => FromMarkers && Time.time - LastSeen < VisibleSeconds;
         }
 
-        readonly TrackedCube _prop = new TrackedCube("prop", "HapticsTutorial.CubeMarkerLayout", 0, MarkerSize);
-        // No saved layout: it always starts from the known net layout below.
+        // No saved layouts: both always start from their known net layouts (see Awake).
+        readonly TrackedCube _prop = new TrackedCube("prop", null, 0, MarkerSize);
         readonly TrackedCube _grasp = new TrackedCube("grasp cube", null, 6, SmallMarkerSize);
         TrackedCube[] _cubes;
         bool _loggedLinkLimit;
@@ -125,11 +129,9 @@ namespace HapticsTutorial
             _grasp.Target = graspCube;
             EnsurePassthrough();
             HeadsetCameraPermissions.Request();
-            if (_prop.Map.Deserialize(PlayerPrefs.GetString(_prop.LayoutKey, "")))
-                Debug.Log($"[Haptics Tutorial] Loaded prop layout: {_prop.Map.LockedCount} markers, {_prop.Map.CubeSize * 100f:F1} cm cube.");
-
-            // The printed net fixes where each marker sits, so the grasp cube tracks from the first
-            // marker it sees. Markers stuck on some other way are still relearned while in view.
+            // The printed nets fix where each marker sits, so both cubes track from the first
+            // marker seen. The blue two-piece net folds to the same layout as the orange cross net.
+            _prop.Map.UseLayout(CubeMarkerMap.CrossNetLayout(PropCubeEdge));
             _grasp.Map.UseLayout(CubeMarkerMap.CrossNetLayout(GraspCubeEdge));
         }
 

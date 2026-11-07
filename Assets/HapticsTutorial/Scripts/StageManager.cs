@@ -16,6 +16,9 @@ namespace HapticsTutorial
         int _index = -1;
         bool _waitingToAdvance;
 
+        public TutorialStage[] Stages => stages;
+        public InstructionPresenter Presenter => presenter;
+
         public void Configure(TutorialStage[] tutorialStages, InstructionPresenter instructionPresenter)
         {
             stages = tutorialStages;

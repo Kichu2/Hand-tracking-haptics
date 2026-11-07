@@ -26,10 +26,23 @@ namespace HapticsTutorial
         Vector3 _physicalStart;
         bool _hasPhysicalStart;
 
+        Vector3? _zonePosition;
+
         public void Configure(XRGrabInteractable grab, TargetZone zone)
         {
             grabInteractable = grab;
             targetZone = zone;
+        }
+
+        /// <summary>Another round with the same cube and zone; the zone moves to <paramref name="zonePosition"/>.</summary>
+        public GraspStage CreateRound(string id, string title, string instruction, Vector3 zonePosition)
+        {
+            var round = new GameObject(title).AddComponent<GraspStage>();
+            round.Configure(grabInteractable, targetZone);
+            round.metaGrab = metaGrab;
+            round.ConfigureIdentity(id, title, instruction);
+            round._zonePosition = zonePosition;
+            return round;
         }
 
         public override void BeginStage()
@@ -39,6 +52,10 @@ namespace HapticsTutorial
             _insideTimer = 0f;
             _hasPhysicalStart = false;
             ResolveMetaGrab();
+            if (_zonePosition.HasValue && targetZone != null)
+                targetZone.MoveTo(_zonePosition.Value);
+            if (grabInteractable != null && metaGrab == null)
+                grabInteractable.enabled = true; // the previous round's EndStage turned it off
 
             var tracked = grabInteractable != null
                 ? grabInteractable.transform
