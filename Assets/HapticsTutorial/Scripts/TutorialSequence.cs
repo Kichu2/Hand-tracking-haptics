@@ -34,6 +34,7 @@ namespace HapticsTutorial
                 return;
 
             var presenter = manager.Presenter;
+            var props = TutorialMode.WithProps;
             var zone = Object.FindFirstObjectByType<TargetZone>();
             var zoneStart = zone != null ? zone.transform.position : Vector3.zero;
             var cube = GameObject.Find("Grasp Cube")?.transform;
@@ -44,12 +45,17 @@ namespace HapticsTutorial
                 new InfoStage.Slide("Welcome", () =>
                 {
                     _startedAt = Time.time;
-                    return "This short tutorial shows how to use your bare hands in VR, and how a real object can make a virtual one feel solid.";
+                    return props
+                        ? "This short tutorial shows how to use your bare hands in VR, and how a real object can make a virtual one feel solid."
+                        : "This short tutorial shows how to use your bare hands in VR to pick up and move virtual objects.";
                 }, 11f),
                 new InfoStage.Slide("Hand tracking",
                     "No controllers needed. The headset's cameras follow your fingers. Hold your hands up in front of you and watch them move.", 11f),
-                new InfoStage.Slide("Passive haptics",
-                    "When a real object sits exactly where a virtual one appears, touching it feels real. The headset camera finds the printed markers on the cube to line the two up.", 12f),
+                props
+                    ? new InfoStage.Slide("Passive haptics",
+                        "When a real object sits exactly where a virtual one appears, touching it feels real. The headset camera finds the printed markers on the cube to line the two up.", 12f)
+                    : new InfoStage.Slide("Virtual objects",
+                        "Everything you touch here is virtual: there is nothing real to hold, so your hand can pass through. Watch your fingers to judge when you are touching a cube.", 12f),
                 new InfoStage.Slide("What's next",
                     "1. Move the cube to targets\n2. Turn it to show a face\n3. Align the larger prop", 10f));
 
@@ -64,7 +70,11 @@ namespace HapticsTutorial
                 "Turn the cube so the yellow face points straight at you. Hold it there for a moment.");
             turn.Configure(cube, presenter, 5);
 
-            prop.ConfigureIdentity(prop.StageId, "3. Align the physical prop", prop.Instruction);
+            if (props)
+                prop.ConfigureIdentity(prop.StageId, "3. Align the physical prop", prop.Instruction);
+            else
+                prop.ConfigureIdentity(prop.StageId, "3. Touch the blue cube",
+                    "Reach out and rest your hand on the blue cube. Hold it there until it turns solid.");
 
             var wrapUp = NewStage<InfoStage>("Wrap Up");
             wrapUp.ConfigureIdentity("wrap_up", "Nice work", "");
@@ -75,8 +85,11 @@ namespace HapticsTutorial
                     var drops = SessionLogger.Instance != null ? SessionLogger.Instance.DropCount : 0;
                     return $"You finished every step in {minutes:F1} minutes with {drops} drop{(drops == 1 ? "" : "s")}.";
                 }, 11f),
-                new InfoStage.Slide("Why it matters",
-                    "Hand tracking removes the controller; the tracked cube gives your hand something real to hold. Together, virtual objects feel like they are there.", 12f),
+                props
+                    ? new InfoStage.Slide("Why it matters",
+                        "Hand tracking removes the controller; the tracked cube gives your hand something real to hold. Together, virtual objects feel like they are there.", 12f)
+                    : new InfoStage.Slide("Something to compare",
+                        "Hand tracking removes the controller, but with nothing real to hold your hand passes through the cubes. Try the version with real cubes and compare how it feels.", 12f),
                 new InfoStage.Slide("Thanks for trying it", "That's the end of the tutorial.", 10f));
 
             var sequence = new List<TutorialStage> { welcome, grasp, round2, round3, turn, prop, wrapUp };

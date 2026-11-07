@@ -66,6 +66,10 @@ namespace HapticsTutorial
             public bool FromMarkers;
             public float LastSeen = -999f;
             public float NextSave;
+            public bool TakenOver;
+            public Rigidbody Body;
+            public XRGrabInteractable XrGrab;
+            public Grabbable[] Grabbables;
             public readonly PoseGate Gate = new PoseGate();
 
             public TrackedCube(string name, string layoutKey, int firstId, float markerSize)
@@ -88,10 +92,6 @@ namespace HapticsTutorial
         TrackedCube[] _cubes;
         bool _loggedLinkLimit;
         float _nextStatusLog;
-        bool _graspTakenOver;
-        Rigidbody _graspBody;
-        XRGrabInteractable _graspXrGrab;
-        Grabbable[] _graspGrabbables;
 
         // Camera frames are read back without stalling the main thread; the camera pose is
         // captured with each request so it matches the image.
@@ -127,10 +127,24 @@ namespace HapticsTutorial
             _cubes = new[] { _prop, _grasp };
             _prop.Target = virtualProp;
             _grasp.Target = graspCube;
+            if (!TutorialMode.WithProps)
+            {
+                // Comparison version: same passthrough view, virtual cubes only. The camera
+                // component sits on this object, so it is switched off before it can start.
+                EnablePassthroughView();
+                if (cameraAccess == null)
+                    cameraAccess = GetComponent<PassthroughCameraAccess>();
+                if (cameraAccess != null)
+                    cameraAccess.enabled = false;
+                Debug.Log("[Haptics Tutorial] No-props version: camera tracking off, virtual cubes only.");
+                enabled = false;
+                return;
+            }
+
             EnsurePassthrough();
             HeadsetCameraPermissions.Request();
             // The printed nets fix where each marker sits, so both cubes track from the first
-            // marker seen. The blue two-piece net folds to the same layout as the orange cross net.
+            // marker seen. Both nets fold to the same cross-net layout, at different sizes.
             _prop.Map.UseLayout(CubeMarkerMap.CrossNetLayout(PropCubeEdge));
             _grasp.Map.UseLayout(CubeMarkerMap.CrossNetLayout(GraspCubeEdge));
         }
@@ -191,8 +205,8 @@ namespace HapticsTutorial
             {
                 if (!cube.Follow || !cube.HasPose || cube.Target == null)
                     continue;
-                if (cube == _grasp)
-                    TakeOverGraspCube();
+                if (cube.FromMarkers)
+                    TakeOver(cube);
 
                 var target = cube.Target;
                 var distance = Vector3.Distance(target.position, cube.Pose.position);
@@ -206,37 +220,37 @@ namespace HapticsTutorial
             }
         }
 
-        // The real cube now carries the virtual one: stop physics and hand-grab from fighting it.
+        // A real cube now carries its virtual twin: stop physics and hand-grab from fighting it.
         // Checked every frame because stages re-enable grabbing, and Meta's Grabbable restores a
         // non-kinematic body (and throws it) when it is released or disabled.
-        void TakeOverGraspCube()
+        static void TakeOver(TrackedCube cube)
         {
-            var target = _grasp.Target;
-            if (!_graspTakenOver)
+            var target = cube.Target;
+            if (!cube.TakenOver)
             {
-                _graspTakenOver = true;
-                _graspBody = target.GetComponent<Rigidbody>();
-                _graspXrGrab = target.GetComponent<XRGrabInteractable>();
-                _graspGrabbables = target.GetComponentsInChildren<Grabbable>(true);
-                Debug.Log("[Haptics Tutorial] Real grasp cube found; the orange cube now follows it.");
+                cube.TakenOver = true;
+                cube.Body = target.GetComponent<Rigidbody>();
+                cube.XrGrab = target.GetComponent<XRGrabInteractable>();
+                cube.Grabbables = target.GetComponentsInChildren<Grabbable>(true);
+                Debug.Log($"[Haptics Tutorial] Real {cube.Name} found; its virtual twin now follows it.");
             }
 
-            if (_graspXrGrab != null && _graspXrGrab.enabled)
-                _graspXrGrab.enabled = false;
+            if (cube.XrGrab != null && cube.XrGrab.enabled)
+                cube.XrGrab.enabled = false;
             MetaGrabUtil.SetEnabled(target.gameObject, false);
-            foreach (var grabbable in _graspGrabbables)
+            foreach (var grabbable in cube.Grabbables)
             {
                 if (grabbable != null && grabbable.enabled)
                     grabbable.enabled = false;
             }
 
-            if (_graspBody != null && (!_graspBody.isKinematic || _graspBody.useGravity ||
-                                       _graspBody.interpolation != RigidbodyInterpolation.None))
+            var body = cube.Body;
+            if (body != null && (!body.isKinematic || body.useGravity || body.interpolation != RigidbodyInterpolation.None))
             {
                 // Interpolation would overwrite the transform we set each frame.
-                _graspBody.isKinematic = true;
-                _graspBody.useGravity = false;
-                _graspBody.interpolation = RigidbodyInterpolation.None;
+                body.isKinematic = true;
+                body.useGravity = false;
+                body.interpolation = RigidbodyInterpolation.None;
             }
         }
 
@@ -249,7 +263,7 @@ namespace HapticsTutorial
                    headset == OVRPlugin.SystemHeadset.Meta_Link_Quest_3S;
         }
 
-        void EnsurePassthrough()
+        static void EnablePassthroughView()
         {
             var manager = OVRManager.instance != null ? OVRManager.instance : FindFirstObjectByType<OVRManager>();
             if (manager != null)
@@ -258,7 +272,11 @@ namespace HapticsTutorial
             var rig = FindFirstObjectByType<OVRCameraRig>();
             if (rig != null && rig.GetComponent<OVRPassthroughLayer>() == null)
                 rig.gameObject.AddComponent<OVRPassthroughLayer>();
+        }
 
+        void EnsurePassthrough()
+        {
+            EnablePassthroughView();
             if (cameraAccess == null)
                 cameraAccess = GetComponent<PassthroughCameraAccess>();
             if (cameraAccess == null)

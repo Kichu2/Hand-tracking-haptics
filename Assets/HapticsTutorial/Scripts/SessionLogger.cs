@@ -37,7 +37,7 @@ namespace HapticsTutorial
             _filePath = Path.Combine(Application.persistentDataPath, $"{filePrefix}_{stamp}.csv");
 
             _buffer.AppendLine("timestamp_iso,elapsed_sec,event,stage,detail,drop_count");
-            Log("session_start", "", "product=" + Application.productName);
+            Log("session_start", "", $"product={Application.productName} condition={TutorialMode.Condition}");
             Debug.Log($"[Haptics Tutorial] Logging to {_filePath}");
         }
 
